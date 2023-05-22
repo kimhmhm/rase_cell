@@ -1,4 +1,4 @@
-import {commonLogic as logic} from "raise_cell/logic/common.js";
+import {commonLogic as logic} from "../logic/common.js";
 
 
 const init = ()=>{
