@@ -8,13 +8,13 @@
    - 배고픔 수치 다 떨어지면 세포 사망
    - 사망하되 세포가 일정 수 이상 감소하면 배고픔 수치 초기화 >// 임시로 해놨지만 세포가 한번에 전부 동시에 죽으면 해결안됨 > 처음 실행하고 먹이 하나도 안주고 가만히 있는 상태인 거임
 
-5. 셀에 탐지범위 넣어서 탐지범위 이상 멀면 음식 추적 안함
+5. 셀에 탐지범위 넣어서 탐지범위 이상 멀면 음식 추적 안함 ****완료****
 6. 번식기능 음식 몇개 이상 먹으면 두마리로 분열 하기 이때 세포 색깔이 유전된다
 7. 사망시 시체 구현 ****완료****
 8. 음식을 찾지 않고 있는 기본 상태에서 조금씩 꾸물거리면서 움직이는 기능 ****완료****
-9. 세포가 먹은 음식의 카운트 마다 세포의 크기를 점점 키우기 분열할 때 줄어듬
-9. 세포들과 음식의 겹치는 좌표값 조정 좌측 상단 기준으로 잡혀있는 좌표 조절해야함
-10. 세포들의 수와 현재 세포들의 색깔당 세포수를 로컬에 저장해서 다시 키면 그대로 세포생성 기능
+9. 세포가 먹은 음식의 카운트 마다 세포의 크기를 점점 키우기 분열할 때 줄어듬****완료****
+10. 세포들과 음식의 겹치는 좌표값 조정 좌측 상단 기준으로 잡혀있는 좌표 조절해야함 ****완료****
+11. 세포들의 수와 현재 세포들의 색깔당 세포수를 로컬에 저장해서 다시 키면 그대로 세포생성 기능
 */
 
 // 전역변수
@@ -22,17 +22,46 @@ let cellInfos = []; // 생성된 세포들의 정보를 담음
 // 만약 세포를 제거할 때는 정보와 렌더링된 세포 둘다 제거해야함
 let foods = []; // 배치된 음식들 클릭하면 생김
 let foodIdCount = 0;// 음식의 id값을 겹치지 않게 추가 하기 위한 값 > 기존에는 foods.length로 넣었엇으나 음식 연타시 겹침
+let cellIdCount = 0; // 위 음식과 마찬가지 이유로 자식 세포들의 id값을 겹치지 않게 하기 위함
 const worldIntervalTime = 1000; // 진행될 세계 시간 간격 ms
 const cellSpeed = 20 // 월드타임 인터벌당 세포가 움직일 px수 (worldIntervalTime=1000ms 면 1초당 움직일 픽셀)
-const cellLifeTime = 1.5; // 세포가 살아있을 시간 분단위로 입력할 것 소수점 가능
+const cellLifeTime = 1.5 * 60 * 1000; // 세포가 살아있을 시간 맨 앞에 분단위로 입력할 것 소수점 가능
 
 const setEvent = () => {
   // main에 걸 이벤트
   const main = document.querySelector("#main");
   main.addEventListener("click", (e) => {
+    _addFood(e);
+  });
+}
+
+const _addFood = (e)=>{
+  const addfoodCount = 4; // 한번에 생성할 음식 개수
+  const addRadius = 80; // 클릭한 좌표 기준으로 음식 생성될 반경
+  const direction = [1,-1]
+  const main = document.getElementById("main");
+  const wd = parseInt(main.clientWidth);
+  const wh = parseInt(main.clientHeight);
+  for(let i =1; i <= addfoodCount; i++){
+    const randomX = direction[Math.floor(Math.random()*direction.length)]*(Math.floor(addRadius * Math.random())+1)
+    const randomY = direction[Math.floor(Math.random()*direction.length)]*(Math.floor(addRadius * Math.random())+1)
+    let foodX = randomX + e.pageX;
+    let foodY = randomY + e.pageY;
+    if(foodX > wd - 1 ){
+      foodX = wd - 1;
+    }
+    if(foodY > wh - 1){
+      foodY = wh - 1;
+    }
+    if(foodX <= 0){
+      foodX = 1;
+    }
+    if(foodY <= 0 ){
+      foodY = 1;
+    }
     const food = {
-      x: e.pageX, // food의 x좌표
-      y: e.pageY, // food의 y좌표
+      x: foodX , // food의 x좌표
+      y: foodY, // food의 y좌표
       color: "#fff",
       width: 2,
       height: 2,
@@ -42,7 +71,7 @@ const setEvent = () => {
     foods.push(food);
     foodIdCount++;
     _renderFood(food);
-  });
+  }
 }
 
 const _renderFood = (food) => {
@@ -70,26 +99,62 @@ const _createCellInfo = (id) => {
   // 배고픔
   /* 세포하나의 정보를 세팅한다 */
   const cell = {};
-  cell.id = id; // 각 세포를 구분하기 위한 id값
-  cell.width = 20;
-  cell.height = 20;
+  cell.id = cellIdCount; // 각 세포를 구분하기 위한 id값
+  cell.radius = 5; // 세포의 반지름
+  cell.width = cell.radius * 2;
+  cell.height = cell.radius * 2;
   cell.color = `rgb(${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)})`;
   cell.roundness = "50%" // 둥글기
-  cell.x = _cellPositionSetting({
-    cellWidth: cell.width,
-    cellHeight: cell.height,
-  }).x; //기본 x축 위치
-  cell.y = _cellPositionSetting({
-    cellWidth: cell.width,
-    cellHeight: cell.height,
-  }).y; // 기본 y축 위치
-  cell.defautX = Math.random() - 0.5 > 0 ? 1 : -1; // 먹이를 탐색하지 않을 때 움직일 x축 방향
-  cell.defautY = Math.random() - 0.5 > 0 ? 1 : -1; // 먹이를 탐색하지 않을 때 움직일 y축 방향
+  cell.x = _cellPositionSetting(cell.radius).x; //기본 세포 중심 x축 위치
+  cell.y = _cellPositionSetting(cell.radius).y; // 기본 세포 중심 y축 위치
+  cell.defautX = _randomDefault(); // 먹이를 탐색하지 않을 때 움직일 x축 방향
+  cell.defautY = _randomDefault(cell.defautX); // 먹이를 탐색하지 않을 때 움직일 y축 방향 만약 x축이0이면 y축은 1이나 -1만 나오게 함 정지를 방지
   cell.move = _cellMove; // 움직임
   cell.eatCount = 0; // 음식 먹은 횟수
   cell.detectRadius = 150; // 세포의 음식 탐지 반경
-  cell.hunger = cellLifeTime * 60 * 1000;
+  cell.hunger = cellLifeTime;
+  cell.renderX = cell.x - cell.radius;// 실제 html의 좌표값이 좌측상단 기준이기 때문에 따로 계산
+  cell.renderY = cell.y - cell.radius;// 실제 html의 좌표값이 좌측상단 기준이기 때문에 따로 계산
+  cell.growth = _growthCell;
+  cell.deGrowth = _degrowth;
+  cellIdCount++; // 세포 아이디카운트 1증가
   return cell;
+}
+
+const _growthCell = function(){
+  // 음식 먹을 때 마다 세포 크기증가 위한 함수
+  const cellDom = document.getElementById(this.id);
+  this.eatCount += 1; // 세포의 먹음 카운트를 1증가
+  this.hunger = cellLifeTime; // 세포의 배고픔 수치 초기화
+  this.radius += 1;
+  this.width = this.radius * 2;
+  this.height = this.radius * 2;
+  this.renderX = this.x - this.radius;// 실제 html의 좌표값이 좌측상단 기준이기 때문에 따로 계산
+  this.renderY = this.y - this.radius;// 실제 html의 좌표값이 좌측상단 기준이기 때문에 따로 계산
+  cellDom.style.width = `${this.width}px`;
+  cellDom.style.height = `${this.height}px`;
+}
+
+const _degrowth = function(){
+  // 세포 분열시 다시 크기 줄이기 위한 함수
+  const cellDom = document.getElementById(this.id);
+  this.eatCount = _createCellInfo(3).eatCount; // 세포의 먹음 카운트 초기화
+  this.hunger = cellLifeTime; // 세포의 배고픔 수치 초기화
+  this.radius = _createCellInfo(3).radius; // 3은 그냥 아무 값 넣은 것
+  this.width = this.radius * 2;
+  this.height = this.radius * 2;
+  this.renderX = this.x - this.radius;// 실제 html의 좌표값이 좌측상단 기준이기 때문에 따로 계산
+  this.renderY = this.y - this.radius;// 실제 html의 좌표값이 좌측상단 기준이기 때문에 따로 계산
+  cellDom.style.width = `${this.width}px`;
+  cellDom.style.height = `${this.height}px`;
+}
+
+const _randomDefault = (anotherDefault) => {
+  // 랜덤으로 0,1,-1 중 하나를 반환해주는 함수
+  const allowZero = [0, 1, -1];
+  const notZero = [1,-1]
+  const result = anotherDefault == 0 ? notZero[Math.floor(Math.random() * notZero.length)] : allowZero[Math.floor(Math.random() * allowZero.length)];
+  return anotherDefault == 0 ? result: result;
 }
 
 const _cellMove = function ({ x, y }) {
@@ -101,17 +166,19 @@ const _cellMove = function ({ x, y }) {
   const cellDom = document.getElementById(this.id); // 렌더링 된 세포
   this.x += x;
   this.y += y;
-  cellDom.style.left = `${this.x}px`;
-  cellDom.style.top = `${this.y}px`;
+  this.renderX += x;
+  this.renderY += y;
+  cellDom.style.left = `${this.renderX}px`;
+  cellDom.style.top = `${this.renderY}px`;
 }
 
-const _cellPositionSetting = ({ cellWidth, cellHeight }) => {
+const _cellPositionSetting = (cellRadius) => {
   /* 세포의 초기 위치를 랜덤하게 지정하기 위한 함수 */
   const mainWrap = document.querySelector("#main");
   const wd = parseInt(mainWrap.clientWidth); //브라우저 너비
   const wh = parseInt(mainWrap.clientHeight); //브라우저 높이
-  const limitWd = wd - cellWidth; // x축 한계
-  const limitht = wh - cellHeight; // y축 한계
+  const limitWd = wd - cellRadius; // x축 한계
+  const limitht = wh - cellRadius; // y축 한계
   let x = Math.floor(Math.random() * wd);
   if (x > limitWd) {
     // 랜덤으로 나온 x좌표가 x축 한계 넘을 경우 x좌표를 x축 한계로 지정하여 브라우저 밖으로 나가는 것 방지
@@ -137,8 +204,8 @@ const _createCellElement = (id) => {
   width:${cellInfo.width}px;
   height:${cellInfo.height}px;
   position:absolute;
-  left:${cellInfo.x}px;
-  top:${cellInfo.y}px;
+  left:${cellInfo.renderX}px;
+  top:${cellInfo.renderY}px;
   border-radius:${cellInfo.roundness};
   box-shadow: 0px 0px 10px 3px ${cellInfo.color};
   `;
@@ -193,20 +260,20 @@ const _findFood = () => {
     if (cell.detectRadius < distances[0].distance) {
       // 세포의 탐지 반경보다 멀리 있을 시 추적하지 않음
       // 리팩토링 필요 밑의 cellDefaultMove함수와 중복되는 코드임
-      const limitWd = wd - cell.width; // x축 한계
-      const limitht = wh - cell.height; // y축 한계
+      const limitWd = wd - cell.radius; // x축 한계
+      const limitht = wh - cell.radius; // y축 한계
       // 브라우저 끝에 도달하면 반대방향으로 바꿈===
-      if (cell.x <= 0) {
-        cell.defautX *= -1;
+      if (cell.x < cell.radius) {
+        cell.defautX = 1;
       }
-      if (cell.y <= 0) {
-        cell.defautY *= -1;
+      if (cell.y < cell.radius) {
+        cell.defautY = 1;
       }
-      if (cell.x >= limitWd) {
-        cell.defautX *= -1;
+      if (cell.x > limitWd) {
+        cell.defautX = -1;
       }
-      if (cell.y >= limitht) {
-        cell.defautY *= -1;
+      if (cell.y > limitht) {
+        cell.defautY = -1;
       }
       // ============================================
       cell.move({ x: cell.defautX, y: cell.defautY, });
@@ -256,11 +323,14 @@ const _eatingFood = () => {
 
     // 하나라도 겹치는 게 있으면 food지움
     cellInfos.forEach((cell) => {
-      if (cell.x == food.x && cell.y == food.y) {
+      const cellXstart = cell.x - cell.radius; // 세포의 x축 시작 지점
+      const cellXend = cell.x + cell.radius; // 세포 x 축 끝지점 
+      const cellYstart = cell.y - cell.radius; // 세포의 y축 시작 지점
+      const cellYend = cell.y + cell.radius; // 세포 y 축 끝지점
+      if(!(cellXstart <= food.x) || !(cellXend >= food.x)) return;
+      if(!(cellYstart <= food.y) || !(cellYend >= food.y)) return;
         isEqual = true;
-        cell.eatCount += 1; // 세포의 먹음 카운트를 1증가
-        cell.hunger = cellLifeTime * 60 * 1000; // 세포의 배고픔 수치 초기화
-      }
+        cell.growth();
     });
     if (isEqual) {
       // 겹친 음식 렌더링된 것 제거
@@ -284,20 +354,20 @@ const _cellDefaultMove = () => {
   const wd = parseInt(mainWrap.clientWidth); //브라우저 너비
   const wh = parseInt(mainWrap.clientHeight); //브라우저 높이
   cellInfos.forEach((cell) => {
-    const limitWd = wd - cell.width; // x축 한계
-    const limitht = wh - cell.height; // y축 한계
+    const limitWd = wd - cell.radius; // x축 한계
+    const limitht = wh - cell.radius; // y축 한계
     // 브라우저 끝에 도달하면 반대방향으로 바꿈===
-    if (cell.x <= 0) {
-      cell.defautX *= -1;
+    if (cell.x < cell.radius) {
+      cell.defautX = 1;
     }
-    if (cell.y <= 0) {
-      cell.defautY *= -1;
+    if (cell.y < cell.radius) {
+      cell.defautY = 1;
     }
-    if (cell.x >= limitWd) {
-      cell.defautX *= -1;
+    if (cell.x > limitWd) {
+      cell.defautX = -1;
     }
-    if (cell.y >= limitht) {
-      cell.defautY *= -1;
+    if (cell.y > limitht) {
+      cell.defautY = -1;
     }
     // ============================================
     cell.move({ x: cell.defautX, y: cell.defautY, });
@@ -320,7 +390,7 @@ const _cellDead = () => {
   if (cellInfos.length <= 3) {
     // 임시로 해놨지만 세포가 한번에 전부 동시에 죽으면 해결안됨 > 처음 실행하고 먹이 하나도 안주고 가만히 있는 상태인 거임
     cellInfos.forEach((cell) => {
-      cell.hunger = cellLifeTime * 60 * 1000;
+      cell.hunger = cellLifeTime;
     })
     return
   };
@@ -348,6 +418,125 @@ const _cellDead = () => {
   cellInfos = newCell;
 }
 
+const _cellCollisionDetection = () => {
+  // 세포간 충돌감지
+  let newCell = [...cellInfos];
+  const main = document.getElementById("main");
+  const wd = parseInt(main.clientWidth);
+  const wh = parseInt(main.clientHeight);
+  cellInfos.forEach((cell) => {
+    const cellXrange = cell.x + cell.radius // cell의 x범위
+    const cellYrange = cell.y + cell.radius // cell y축 범위
+    newCell.forEach((anotherCell) => {
+      if(cell.id == anotherCell.id) return; // 자신을 제외
+      let overlapX = false;
+      let overlapY = false;
+      if ((cell.x - cell.radius <= anotherCell.x) && (cellXrange >= anotherCell.x)){ overlapX = true};
+      if ((cell.y - cell.radius <= anotherCell.y) && (cellYrange >= anotherCell.y)){ overlapY = true};
+
+      if (!overlapX || !overlapY) return;
+      cell.defautX *= -1;
+      cell.defautY *= -1;
+      if (cell.x <= anotherCell.x) {
+        cell.move({
+          x: -1,
+          y: 0,
+        });
+      }
+      if(cell.y <= anotherCell.y){
+        cell.move({
+          x:0,
+          y:-1,
+        })
+      }
+      if(cell.x >= anotherCell.x){
+        cell.move({
+          x:1,
+          y:0,
+        })
+      }
+      if(cell.y >= anotherCell.y){
+        cell.move({
+          x:0,
+          y:1,
+        })
+      }
+      // 충돌 때매 밀려나도 브라우저 밖으로 나가면 반대방향으로 이동시킴
+      if(cell.x >= wd - cell.radius){
+        cell.move({
+          x : -1,
+          y : 0
+        })
+      }
+      if(cell.y >= wh - cell.radius){
+        cell.move({
+          x : 0,
+          y : -1
+        })
+      }
+      if(cell.x <= cell.radius){
+        cell.move({
+          x : 1,
+          y : 0
+        })
+      }
+      if(cell.y <= cell.radius){
+        cell.move({
+          x : 0,
+          y : 1
+        })
+      }
+    });
+
+    // if (isOverLap) {
+    //   // cell.move();
+    // }
+  });
+}
+
+const _cellDivision =()=>{
+  // 음식 섭취 감시 함수 바로 뒤에 작성되어야함
+  // 세포들의 음식 섭취 카운트를 감지해서 몇 개 이상 섭취 시 카운트를 초기화하고
+  // 모든 속성을 복사받은 또다른 세포를 복사시킴
+  const divisionConditionCount = 5; // 분열 조건 충족 갯수
+  let childCells = []; // 복사(유전)된 세포들을 담을 배열
+  cellInfos.forEach((cell)=>{
+    if(cell.eatCount >= divisionConditionCount){
+      cell.deGrowth();
+      let child = {...cell};
+      child.id = cellIdCount;
+      child.hunger = cellLifeTime;
+      child.defautX = _randomDefault(); 
+      child.defautY = _randomDefault(child.defautX);
+      childCells.push(child);
+      cellIdCount++;
+    }
+  });
+
+  childCells.forEach((child)=>{
+    cellInfos.push(child);
+    _renderChildCell(child);
+  });
+}
+
+const _renderChildCell = (child)=>{
+  const main = document.getElementById("main");
+  // 자식 세포 렌더링 함수
+  const cell = document.createElement("div");
+  cell.style.cssText = `
+  width:${child.width}px;
+  height:${child.height}px;
+  position:absolute;
+  left:${child.renderX}px;
+  top:${child.renderY}px;
+  border-radius:${child.roundness};
+  box-shadow: 0px 0px 10px 3px ${child.color};
+  `;
+  cell.setAttribute("id", child.id);
+  cell.classList.add(`cell`);
+  main.append(cell);
+}
+
 const _cellActive = () => {
   // 세포의 활동 실행 함수
   const duringTime = worldIntervalTime / cellSpeed; // 단위 시간 
@@ -360,6 +549,8 @@ const _cellActive = () => {
       }
       _findFood(); // 음식을 찾아 움직임
       _eatingFood(); // 음식을 먹었는지 안먹었는지 감시
+      _cellDivision(); // 세포의 음식 카운트를 감시하여 분열 결정하는 함수
+      _cellCollisionDetection(); // 세포들의 충돌 감지
     }, duringTime * i);
   }
   // =====이쪽은 월드 인터벌 타임당 한번씩 실행할 함수들
