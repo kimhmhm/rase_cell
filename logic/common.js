@@ -26,6 +26,7 @@ let cellIdCount = 0; // 위 음식과 마찬가지 이유로 자식 세포들의
 const worldIntervalTime = 1000; // 진행될 세계 시간 간격 ms
 const cellSpeed = 20 // 월드타임 인터벌당 세포가 움직일 px수 (worldIntervalTime=1000ms 면 1초당 움직일 픽셀)
 const cellLifeTime = 1.5 * 60 * 1000; // 세포가 살아있을 시간 맨 앞에 분단위로 입력할 것 소수점 가능
+let randomFood = null; // 일정 시간마다 랜덤한 위치에 음식을 뿌리는 타이머를 담을 변수
 
 const setEvent = () => {
   // main에 걸 이벤트
@@ -35,18 +36,20 @@ const setEvent = () => {
   });
 }
 
-const _addFood = (e)=>{
+const _addFood = (e,random = false)=>{
   const addfoodCount = 4; // 한번에 생성할 음식 개수
   const addRadius = 80; // 클릭한 좌표 기준으로 음식 생성될 반경
   const direction = [1,-1]
   const main = document.getElementById("main");
   const wd = parseInt(main.clientWidth);
   const wh = parseInt(main.clientHeight);
+  const posX = random ? Math.floor(Math.random()*wd) : e.pageX;
+  const posY = random ? Math.floor(Math.random()*wh) : e.pageY;
   for(let i =1; i <= addfoodCount; i++){
     const randomX = direction[Math.floor(Math.random()*direction.length)]*(Math.floor(addRadius * Math.random())+1)
     const randomY = direction[Math.floor(Math.random()*direction.length)]*(Math.floor(addRadius * Math.random())+1)
-    let foodX = randomX + e.pageX;
-    let foodY = randomY + e.pageY;
+    let foodX = randomX + posX;
+    let foodY = randomY + posY;
     if(foodX > wd - 1 ){
       foodX = wd - 1;
     }
@@ -558,11 +561,22 @@ const _cellActive = () => {
   _cellDead();
 }
 
+const _randomFoodSupply = ()=>{
+  // 랜덤으로 음식을 뿌려줄 타이머 함수 세팅
+  if(randomFood != null) return; // 이미 타이머가 작동중이면 함수 종료
+  _addFood(null,true);
+  randomFood = setTimeout(()=>{
+    clearTimeout(randomFood);
+    randomFood = null;
+  },10000);
+}
+
 const worldTimer = () => {
   // 세계 시간 진행
 
   setInterval(() => {
     _cellActive();
+    _randomFoodSupply();
   }, worldIntervalTime);
 }
 
